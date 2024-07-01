@@ -1,23 +1,35 @@
-import {useCallback, useEffect, useMemo, useRef} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {StackScreenProps} from '../navigation';
 import {NavigationState} from '@react-navigation/native';
 import RNFS from 'react-native-fs';
 import colors from '../constants/colors';
+import RenderFolderFile from '../components/RenderFolderFile';
 
 const Home = ({route, navigation}: StackScreenProps<'Home'>) => {
   const scrollRef = useRef<ScrollView>(null);
+  const [StorageData, setStorageData] = useState<RNFS.ReadDirItem[]>([]);
 
   const ReadStorage = async () => {
     try {
-      const data = await RNFS.readDir(RNFS.MainBundlePath);
-      console.log(JSON.stringify(data));
+      const data = await RNFS.readDir(RNFS.ExternalStorageDirectoryPath);
+      if (Array.isArray(data)) {
+        setStorageData(data);
+      }
     } catch (error) {
       console.log(error);
     }
   };
 
   useEffect(() => {
+    ReadStorage();
     scrollRef.current?.scrollToEnd({animated: false});
     if (route.params?.name) navigation.setOptions({title: route.params?.name});
   }, [navigation, route.params?.name]);
@@ -46,9 +58,13 @@ const Home = ({route, navigation}: StackScreenProps<'Home'>) => {
     [NavigationData],
   );
 
+  const renderItem = useCallback(({item}: {item: RNFS.ReadDirItem}) => {
+    return <RenderFolderFile data={item} />;
+  }, []);
+
   return (
-    <View style={styles.App}>
-      <View>
+    <View style={styles.Home}>
+      {/* <View>
         <ScrollView horizontal ref={scrollRef}>
           {NavigationData.routes.map((item, index) => (
             <Text
@@ -60,13 +76,18 @@ const Home = ({route, navigation}: StackScreenProps<'Home'>) => {
             </Text>
           ))}
         </ScrollView>
-      </View>
+      </View> */}
+      <FlatList
+        data={StorageData}
+        renderItem={renderItem}
+        keyExtractor={(_, idx) => `${idx}`}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  App: {flex: 1},
+  Home: {flex: 1, backgroundColor: colors.bg_primary},
   press: {alignSelf: 'center', marginTop: 100},
   text: {marginRight: 10, color: colors.text_primary},
 });
